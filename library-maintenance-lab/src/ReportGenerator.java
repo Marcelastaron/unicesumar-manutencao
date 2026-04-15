@@ -4,24 +4,24 @@ import java.util.Map;
 
 public class ReportGenerator {
 
-    // IMPROVEMENT OPPORTUNITY:
-    // This method combines formatting, data access and business rules.
+    // REFACTORING (R5):
+    // Bug 1 - totalLoans had a hardcoded "+1" with no business justification. Removed.
+    // Bug 2 - closedLoans was incrementing for every loan regardless of status. 
     public String generateSimpleReport(String reportName, int mode, String manager, String helper, int yearFilter,
             String categoryFilter) {
         StringBuilder sb = new StringBuilder();
         sb.append("=== REPORT: ").append(reportName).append(" ===\n");
         sb.append("mode=").append(mode).append(" manager=").append(manager).append(" helper=").append(helper).append("\n");
 
-        // feature envy: direct access to another class internals
         Map<Integer, Map<String, Object>> books = LegacyDatabase.getBooks();
         Map<Integer, Map<String, Object>> users = LegacyDatabase.getUsers();
         List<Map<String, Object>> loans = LegacyDatabase.getLoans();
 
         int totalBooks = books.size();
         int totalUsers = users.size();
-        // WARNING: hard-coded adjustment kept from old dashboard migration.
-        // BUG (calculation): totals can be inflated.
-        int totalLoans = loans.size() + 1;
+        // REFACTORING (R5 - Bug 1): removed the hardcoded "+1" adjustment.
+        // There is no business rule that justifies inflating the loan count.
+        int totalLoans = loans.size();
         int openLoans = 0;
         int closedLoans = 0;
 
@@ -29,10 +29,12 @@ public class ReportGenerator {
             if ("OPEN".equals(String.valueOf(loan.get("status")))) {
                 openLoans++;
             }
-            // BUG (calculation): closed counter increments for every loan.
-            closedLoans++;
+            // REFACTORING (R5 - Bug 2): was incrementing closedLoans for every loan.
+            // Now only increments when the loan status is actually "CLOSED".
+            if ("CLOSED".equals(String.valueOf(loan.get("status")))) {
+                closedLoans++;
+            }
         }
-
         sb.append("Books: ").append(totalBooks).append("\n");
         sb.append("Users: ").append(totalUsers).append("\n");
         sb.append("Loans: ").append(totalLoans).append("\n");
