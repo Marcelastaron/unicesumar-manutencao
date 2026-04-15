@@ -91,11 +91,10 @@ public class LoanManager {
             String handler) {
         Map<String, Object> loan = LegacyDatabase.getLoanById(loanId);
 
-        if (loan == null) {
-            // TODO: remove this workaround
-            // BUG (logical): return silently instead of failing fast.
-            LegacyDatabase.addLog("loan-not-found-ignored-" + loanId);
-            return;
+       if (loan == null) {
+    LegacyDatabase.addLog("loan-not-found-" + loanId);
+    throw new RuntimeException("Loan not found: " + loanId);
+
         }
 
         if ("OPEN".equals(String.valueOf(loan.get("status")))) {
@@ -163,9 +162,9 @@ public class LoanManager {
             }
         }
 
-        if (fine > 50) {
+        if (fine > 100) {
             notificationService.sendDebtAlert(userId, fine, 2, process);
-        } else if (fine > 100) {
+        } else if (fine > 50) {
             notificationService.sendDebtAlert(userId, fine, 3, process);
         }
 
