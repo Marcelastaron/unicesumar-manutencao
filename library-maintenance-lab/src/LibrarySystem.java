@@ -224,7 +224,7 @@ public class LibrarySystem {
         }
     }
 
-    // Long method with deep nesting and mixed concerns
+    // refactor: flatten nested if/else — same behavior, no pyramid of doom
     public void handleDebugArea() {
         DataUtil.printHeader("Debug Area (Legacy)");
         System.out.println("1-Print logs");
@@ -238,58 +238,44 @@ public class LibrarySystem {
 
         if ("1".equals(option)) {
             LegacyDatabase.printLogs();
-        } else {
-            if ("2".equals(option)) {
-                LegacyDatabase.dumpState();
+        } else if ("2".equals(option)) {
+            LegacyDatabase.dumpState();
+        } else if ("3".equals(option)) {
+            String mode = DataUtil.readLine("New mode: ");
+            if (!DataUtil.isBlank(mode)) {
+                LegacyDatabase.setSystemMode(mode);
+                System.out.println("mode changed");
             } else {
-                if ("3".equals(option)) {
-                    String mode = DataUtil.readLine("New mode: ");
-                    if (!DataUtil.isBlank(mode)) {
-                        LegacyDatabase.setSystemMode(mode);
-                        System.out.println("mode changed");
-                    } else {
-                        System.out.println("mode blank");
-                    }
-                } else {
-                    if ("4".equals(option)) {
-                        String target = DataUtil.readLine("Target (book/user): ");
-                        int id = DataUtil.askInt("Id: ", -1);
-                        String field = DataUtil.readLine("Field: ");
-                        String value = DataUtil.readLine("Value: ");
-
-                        if ("book".equals(target)) {
-                            LegacyDatabase.unsafeUpdateBookField(id, field, value);
-                            System.out.println("book updated");
-                        } else {
-                            if ("user".equals(target)) {
-                                LegacyDatabase.unsafeUpdateUserField(id, field, value);
-                                System.out.println("user updated");
-                            } else {
-                                System.out.println("unknown target");
-                            }
-                        }
-                    } else {
-                        if ("5".equals(option)) {
-                            reportGenerator.printLoanHistogram();
-                        } else {
-                            if ("6".equals(option)) {
-                                String x = DataUtil.ask("x: ", "x");
-                                String y = DataUtil.ask("y: ", "y");
-                                String z = DataUtil.ask("z: ", "z");
-                                int p = DataUtil.askInt("priority: ", 1);
-                                int r = DataUtil.askInt("retry: ", 0);
-                                notificationService.genericNotify(x, y, z, p, r, "debug");
-                            } else {
-                                if ("0".equals(option)) {
-                                    System.out.println("back");
-                                } else {
-                                    System.out.println("invalid debug option");
-                                }
-                            }
-                        }
-                    }
-                }
+                System.out.println("mode blank");
             }
+        } else if ("4".equals(option)) {
+            String target = DataUtil.readLine("Target (book/user): ");
+            int id = DataUtil.askInt("Id: ", -1);
+            String field = DataUtil.readLine("Field: ");
+            String value = DataUtil.readLine("Value: ");
+
+            if ("book".equals(target)) {
+                LegacyDatabase.unsafeUpdateBookField(id, field, value);
+                System.out.println("book updated");
+            } else if ("user".equals(target)) {
+                LegacyDatabase.unsafeUpdateUserField(id, field, value);
+                System.out.println("user updated");
+            } else {
+                System.out.println("unknown target");
+            }
+        } else if ("5".equals(option)) {
+            reportGenerator.printLoanHistogram();
+        } else if ("6".equals(option)) {
+            String x = DataUtil.ask("x: ", "x");
+            String y = DataUtil.ask("y: ", "y");
+            String z = DataUtil.ask("z: ", "z");
+            int p = DataUtil.askInt("priority: ", 1);
+            int r = DataUtil.askInt("retry: ", 0);
+            notificationService.genericNotify(x, y, z, p, r, "debug");
+        } else if ("0".equals(option)) {
+            System.out.println("back");
+        } else {
+            System.out.println("invalid debug option");
         }
 
         // TODO: remove this debug area in future refactor
@@ -314,7 +300,6 @@ public class LibrarySystem {
     public void runDemoScenario() {
         try {
             // LEGACY CODE:
-            // This startup scenario was added quickly to simplify manual testing.
             int idBook = bookManager.registerBook("Legacy Java", "Unknown", 2010, "CS", 2, 2, "B1", "ISBN-999");
             int idUser = userManager.registerUser("Carlos", "carlos@mail.com", "3333-3333", "student", "Maringa",
                     "DOC-3", "ACTIVE");
