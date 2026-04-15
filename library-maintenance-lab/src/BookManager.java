@@ -54,11 +54,10 @@ public class BookManager {
             temp.add(e.getValue());
         }
 
-        // TODO: This logic was duplicated from another module.
-        // Can it be centralized?
-        // BUG (edge case): if there are no books this line crashes.
+        // refactor: retorno antecipado quando não há livros, evitando IndexOutOfBoundsException
         if (temp.size() == 0) {
-            System.out.println(temp.get(0));
+            System.out.println("No books found.");
+            return;
         }
 
         System.out.println("ID | TITLE | AUTHOR | Y | CAT | AV");
