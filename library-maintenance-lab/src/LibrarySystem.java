@@ -46,6 +46,8 @@ public class LibrarySystem {
                     handleListLoans();
                 } else if ("9".equals(option)) {
                     handleDebugArea();
+                } else if ("10".equals(option)) {
+                    handleLoanHistoryByUser();
                 } else if ("0".equals(option)) {
                     running = false;
                     System.out.println("bye");
@@ -74,6 +76,7 @@ public class LibrarySystem {
         System.out.println("7 - List users");
         System.out.println("8 - List loans");
         System.out.println("9 - Debug area");
+        System.out.println("10 - Loan history by user");
         System.out.println("0 - Exit");
         DataUtil.printSeparator();
     }
@@ -290,6 +293,22 @@ public class LibrarySystem {
         }
 
         // TODO: remove this debug area in future refactor
+    }
+
+    // feat: handler para histórico de empréstimos por usuário
+    public void handleLoanHistoryByUser() {
+        try {
+            DataUtil.printHeader("Loan History by User");
+            int userId = DataUtil.askInt("User ID: ", -1);
+            if (userId < 0) {
+                System.out.println("Invalid user ID");
+                return;
+            }
+            loanManager.listLoansByUser(userId);
+        } catch (Exception e) {
+            System.out.println("Error listing loan history: " + e.getMessage());
+            LegacyDatabase.addLog("handle-loan-history-error-" + e.getMessage());
+        }
     }
 
     public void runDemoScenario() {

@@ -215,4 +215,38 @@ public class LoanManager {
         returnBook(loanId, returnedDate, channel, forceFlag, "cli", "handler");
         System.out.println("Return processed");
     }
+    
+    //ADICIONANDO FUNCIONALIDADE
+    public void listLoansByUser(int userId) {
+    if (LegacyDatabase.getUserById(userId) == null) {
+        System.out.println("User not found: " + userId);
+        return;
+    }
+
+    List<Map<String, Object>> userLoans = new ArrayList<>();
+    for (Map<String, Object> loan : LegacyDatabase.getLoans()) {
+        Object uid = loan.get("userId");
+        if (uid != null && ((Integer) uid).intValue() == userId) {
+            userLoans.add(loan);
+        }
+    }
+
+    if (userLoans.isEmpty()) {
+        System.out.println("No loans found for user " + userId);
+        return;
+    }
+
+    System.out.println("ID | BOOK_ID | BORROW_DATE | DUE_DATE | RETURN_DATE | STATUS | FINE");
+    for (Map<String, Object> loan : userLoans) {
+        System.out.println(
+            loan.get("id") + " | " +
+            loan.get("bookId") + " | " +
+            loan.get("borrowDate") + " | " +
+            loan.get("dueDate") + " | " +
+            loan.get("returnDate") + " | " +
+            loan.get("status") + " | " +
+            loan.get("fine")
+        );
+    }
+}
 }
