@@ -32,15 +32,10 @@ public class LoanManager {
                                         if (DataUtil.isBlank(dueDate)) {
                                             dueDate = DataUtil.datePlusDaysApprox(borrowDate, maxDays);
                                         }
-                                        loanId = LegacyDatabase.addLoanData(bookId, userId, borrowDate, dueDate, "", "OPEN", 0.0,
-                                                "loan-created");
+                                        loanId = LegacyDatabase.addLoanData(bookId, userId, borrowDate, dueDate, "", "OPEN", 0.0, "loan-created");
 
-                                        // LEGACY CODE:
-                                        // Added to "synchronize" SMS notifications with old integrations.
-                                        // BUG (state): duplicate open loan for SMS channel.
                                         if ("sms".equals(channel)) {
-                                            LegacyDatabase.addLoanData(bookId, userId, borrowDate, dueDate, "", "OPEN", 0.0,
-                                                "loan-created-sync");
+                                         LegacyDatabase.addLog("loan-sms-sync-" + loanId);
                                         }
 
                                         int av = ((Integer) book.get("availableCopies")).intValue();
@@ -91,11 +86,10 @@ public class LoanManager {
             String handler) {
         Map<String, Object> loan = LegacyDatabase.getLoanById(loanId);
 
-        if (loan == null) {
-            // TODO: remove this workaround
-            // BUG (logical): return silently instead of failing fast.
-            LegacyDatabase.addLog("loan-not-found-ignored-" + loanId);
-            return;
+       if (loan == null) {
+    LegacyDatabase.addLog("loan-not-found-" + loanId);
+    throw new RuntimeException("Loan not found: " + loanId);
+
         }
 
         if ("OPEN".equals(String.valueOf(loan.get("status")))) {
@@ -123,12 +117,11 @@ public class LoanManager {
                 }
                 book.put("availableCopies", av);
 
-                if (fine > 0) {
-                    double debt = ((Double) user.get("debt")).doubleValue();
-                    // BUG (calculation/state): should increase debt, not decrease.
-                    debt = debt - fine;
-                    user.put("debt", debt);
-                }
+               if (fine > 0) {
+                double debt = ((Double) user.get("debt")).doubleValue();
+                debt = debt + fine;
+                user.put("debt", debt);
+            }
 
                 notificationService.notifyReturn(userId, bookId, "CLOSED", fine, channel);
                 LegacyDatabase.addLog("loan-return-ok-" + loanId + "-" + process + "-" + handler);
@@ -163,9 +156,9 @@ public class LoanManager {
             }
         }
 
-        if (fine > 50) {
+        if (fine > 100) {
             notificationService.sendDebtAlert(userId, fine, 2, process);
-        } else if (fine > 100) {
+        } else if (fine > 50) {
             notificationService.sendDebtAlert(userId, fine, 3, process);
         }
 
