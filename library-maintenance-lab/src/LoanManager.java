@@ -1,5 +1,6 @@
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 public class LoanManager {
 
@@ -33,10 +34,6 @@ public class LoanManager {
                                             dueDate = DataUtil.datePlusDaysApprox(borrowDate, maxDays);
                                         }
                                         loanId = LegacyDatabase.addLoanData(bookId, userId, borrowDate, dueDate, "", "OPEN", 0.0, "loan-created");
-
-                                        if ("sms".equals(channel)) {
-                                         LegacyDatabase.addLog("loan-sms-sync-" + loanId);
-                                        }
 
                                         int av = ((Integer) book.get("availableCopies")).intValue();
                                         book.put("availableCopies", av - 1);
@@ -86,10 +83,9 @@ public class LoanManager {
             String handler) {
         Map<String, Object> loan = LegacyDatabase.getLoanById(loanId);
 
-       if (loan == null) {
-    LegacyDatabase.addLog("loan-not-found-" + loanId);
-    throw new RuntimeException("Loan not found: " + loanId);
-
+        if (loan == null) {
+            LegacyDatabase.addLog("loan-not-found-" + loanId);
+            throw new RuntimeException("Loan not found: " + loanId);
         }
 
         if ("OPEN".equals(String.valueOf(loan.get("status")))) {
@@ -117,11 +113,11 @@ public class LoanManager {
                 }
                 book.put("availableCopies", av);
 
-               if (fine > 0) {
-                double debt = ((Double) user.get("debt")).doubleValue();
-                debt = debt + fine;
-                user.put("debt", debt);
-            }
+                if (fine > 0) {
+                    double debt = ((Double) user.get("debt")).doubleValue();
+                    debt = debt + fine;
+                    user.put("debt", debt);
+                }
 
                 notificationService.notifyReturn(userId, bookId, "CLOSED", fine, channel);
                 LegacyDatabase.addLog("loan-return-ok-" + loanId + "-" + process + "-" + handler);
@@ -216,37 +212,37 @@ public class LoanManager {
         System.out.println("Return processed");
     }
     
-    //ADICIONANDO FUNCIONALIDADE
+    // ADICIONANDO FUNCIONALIDADE
     public void listLoansByUser(int userId) {
-    if (LegacyDatabase.getUserById(userId) == null) {
-        System.out.println("User not found: " + userId);
-        return;
-    }
+        if (LegacyDatabase.getUserById(userId) == null) {
+            System.out.println("User not found: " + userId);
+            return;
+        }
 
-    List<Map<String, Object>> userLoans = new ArrayList<>();
-    for (Map<String, Object> loan : LegacyDatabase.getLoans()) {
-        Object uid = loan.get("userId");
-        if (uid != null && ((Integer) uid).intValue() == userId) {
-            userLoans.add(loan);
+        List<Map<String, Object>> userLoans = new ArrayList<>();
+        for (Map<String, Object> loan : LegacyDatabase.getLoans()) {
+            Object uid = loan.get("userId");
+            if (uid != null && ((Integer) uid).intValue() == userId) {
+                userLoans.add(loan);
+            }
+        }
+
+        if (userLoans.isEmpty()) {
+            System.out.println("No loans found for user " + userId);
+            return;
+        }
+
+        System.out.println("ID | BOOK_ID | BORROW_DATE | DUE_DATE | RETURN_DATE | STATUS | FINE");
+        for (Map<String, Object> loan : userLoans) {
+            System.out.println(
+                loan.get("id") + " | " +
+                loan.get("bookId") + " | " +
+                loan.get("borrowDate") + " | " +
+                loan.get("dueDate") + " | " +
+                loan.get("returnedDate") + " | " +
+                loan.get("status") + " | " +
+                loan.get("fine")
+            );
         }
     }
-
-    if (userLoans.isEmpty()) {
-        System.out.println("No loans found for user " + userId);
-        return;
-    }
-
-    System.out.println("ID | BOOK_ID | BORROW_DATE | DUE_DATE | RETURN_DATE | STATUS | FINE");
-    for (Map<String, Object> loan : userLoans) {
-        System.out.println(
-            loan.get("id") + " | " +
-            loan.get("bookId") + " | " +
-            loan.get("borrowDate") + " | " +
-            loan.get("dueDate") + " | " +
-            loan.get("returnDate") + " | " +
-            loan.get("status") + " | " +
-            loan.get("fine")
-        );
-    }
-}
 }
