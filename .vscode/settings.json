@@ -1,0 +1,7 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "c:\\Users\\Marcela Staron\\Downloads\\junit-jupiter-api-5.10.0-javadoc.jar",
+        "c:\\Users\\Marcela Staron\\Downloads\\junit-jupiter-api-5.10.0.jar"
+    ]
+}
