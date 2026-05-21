@@ -27,6 +27,12 @@ public class LegacyDatabase {
 
     public static int addBookData(String title, String author, int year, String category, int totalCopies, int availableCopies,
             String shelfCode, String isbn) {
+        
+        // CORREÇÃO DO BUG: Validação por contrato para impedir título nulo ou vazio
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("O título do livro não pode ser nulo ou vazio.");
+        }
+
         Map<String, Object> data = new HashMap<String, Object>();
         int id = BOOK_SEQ;
         BOOK_SEQ = BOOK_SEQ + 1;
@@ -45,6 +51,7 @@ public class LegacyDatabase {
         logs.add("book-added-" + id);
         return id;
     }
+
 
     public static int addUserData(String name, String email, String phone, String userType, String city,
             String document, String status) {
