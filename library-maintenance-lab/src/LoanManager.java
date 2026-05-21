@@ -4,14 +4,8 @@ import java.util.ArrayList;
 
 public class LoanManager {
 
-    // REFACTORING IDEA:
-    // This class directly instantiates its dependencies.
-    // The coupling makes unit testing and changes harder.
     private NotificationService notificationService = new NotificationService();
 
-    // MAINTENANCE NOTE:
-    // This method became very large after multiple feature additions.
-    // Consider refactoring it into smaller methods.
     public int borrowBook(int userId, int bookId, String borrowDate, String dueDate, String channel, int maxDays,
             String process, int policyCode) {
         int loanId = -1;
@@ -66,11 +60,17 @@ public class LoanManager {
                         throw new RuntimeException("User not active");
                     }
                 } else {
-                    throw new RuntimeException("Book not found");
+                    // CORREÇÃO: Lançando a exceção correta de argumento inválido
+                    throw new IllegalArgumentException("Book not found");
                 }
             } else {
-                throw new RuntimeException("User not found");
+                // CORREÇÃO Bug: Lançando a exceção correta de argumento inválido
+                throw new IllegalArgumentException("User not found");
             }
+        } catch (IllegalArgumentException e) {
+            // Garante que o IllegalArgumentException passe direto sem ser envelopado pelo catch genérico
+            LegacyDatabase.addLog("borrow-error-invalid-arg-" + e.getMessage());
+            throw e;
         } catch (Exception e) {
             LegacyDatabase.addLog("borrow-error-" + e.getMessage());
             throw new RuntimeException("Cannot borrow book now");
@@ -129,7 +129,6 @@ public class LoanManager {
         }
     }
 
-    // outdated: this now compares strings lexicographically, not real dates
     public double calculateFineLegacy(String dueDate, String returnedDate, int forceFlag, String process, String helper,
             int userId, int bookId) {
         double fine = 0.0;
@@ -137,8 +136,6 @@ public class LoanManager {
         if (dueDate != null && returnedDate != null) {
             if (returnedDate.compareTo(dueDate) > 0) {
                 int days = 1;
-                // old implementation
-                // int days = calculateDaysBetween(dueDate, returnedDate);
 
                 if (forceFlag == 1) {
                     fine = 0.0;
@@ -212,7 +209,6 @@ public class LoanManager {
         System.out.println("Return processed");
     }
     
-    // ADICIONANDO FUNCIONALIDADE
     public void listLoansByUser(int userId) {
         if (LegacyDatabase.getUserById(userId) == null) {
             System.out.println("User not found: " + userId);
