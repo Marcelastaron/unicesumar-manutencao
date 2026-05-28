@@ -4,6 +4,11 @@ import java.util.ArrayList;
 
 public class LoanManager {
 
+    // Constantes para eliminar os "Números Mágicos" apontados pelo SonarLint
+    private static final double MAX_ALLOWED_DEBT = 100.0;
+    private static final int MAX_OPEN_LOANS_PER_USER = 5;
+    private static final int DEFAULT_LOAN_DAYS = 14;
+
     private NotificationService notificationService = new NotificationService();
 
     public int borrowBook(int userId, int bookId, String borrowDate, String dueDate, String channel, int maxDays,
@@ -14,61 +19,35 @@ public class LoanManager {
             Map<String, Object> user = LegacyDatabase.getUserById(userId);
             Map<String, Object> book = LegacyDatabase.getBookById(bookId);
 
-            if (user != null) {
-                if (book != null) {
-                    if ("ACTIVE".equals(String.valueOf(user.get("status")))) {
-                        if (((Double) user.get("debt")).doubleValue() <= 100.0) {
-                            if (((Integer) book.get("availableCopies")).intValue() > 0) {
-                                if (LegacyDatabase.countOpenLoansByUser(userId) < 5) {
-                                    if (LegacyDatabase.countOpenLoansByBook(bookId) < ((Integer) book.get("totalCopies")).intValue()) {
-                                        if (DataUtil.isBlank(borrowDate)) {
-                                            borrowDate = DataUtil.nowDate();
-                                        }
-                                        if (DataUtil.isBlank(dueDate)) {
-                                            dueDate = DataUtil.datePlusDaysApprox(borrowDate, maxDays);
-                                        }
-                                        loanId = LegacyDatabase.addLoanData(bookId, userId, borrowDate, dueDate, "", "OPEN", 0.0, "loan-created");
-
-                                        int av = ((Integer) book.get("availableCopies")).intValue();
-                                        book.put("availableCopies", av - 1);
-
-                                        notificationService.notifyLoanCreated(userId, bookId, borrowDate, dueDate, channel,
-                                                "TPL1", "manager");
-
-                                        if (policyCode == 7) {
-                                            LegacyDatabase.addLog("loan-policy-7-" + process);
-                                        } else if (policyCode == 8) {
-                                            LegacyDatabase.addLog("loan-policy-8-" + process);
-                                        } else {
-                                            LegacyDatabase.addLog("loan-policy-default-" + process);
-                                        }
-
-                                        LegacyDatabase.addLog("loan-created-ok-" + loanId);
-                                    } else {
-                                        throw new RuntimeException("No book copies by open loan count");
-                                    }
-                                } else {
-                                    throw new RuntimeException("User has too many open loans");
-                                }
-                            } else {
-                                throw new RuntimeException("No available copies");
-                            }
-                        } else {
-                            throw new RuntimeException("User debt too high");
-                        }
-                    } else {
-                        throw new RuntimeException("User not active");
-                    }
-                } else {
-                    // CORREÇÃO: Lançando a exceção correta de argumento inválido
-                    throw new IllegalArgumentException("Book not found");
-                }
-            } else {
-                // CORREÇÃO Bug: Lançando a exceção correta de argumento inválido
+            if (user == null) {
                 throw new IllegalArgumentException("User not found");
             }
+            if (book == null) {
+                throw new IllegalArgumentException("Book not found");
+            }
+
+            // Refatoração Oportunista: Extração de validações para métodos limpos (Regra do Escoteiro)
+            validateUserEligibility(user, userId);
+            validateBookEligibility(book, bookId);
+
+            if (DataUtil.isBlank(borrowDate)) {
+                borrowDate = DataUtil.nowDate();
+            }
+            if (DataUtil.isBlank(dueDate)) {
+                dueDate = DataUtil.datePlusDaysApprox(borrowDate, maxDays > 0 ? maxDays : DEFAULT_LOAN_DAYS);
+            }
+
+            loanId = LegacyDatabase.addLoanData(bookId, userId, borrowDate, dueDate, "", "OPEN", 0.0, "loan-created");
+
+            int av = ((Integer) book.get("availableCopies")).intValue();
+            book.put("availableCopies", av - 1);
+
+            notificationService.notifyLoanCreated(userId, bookId, borrowDate, dueDate, channel, "TPL1", "manager");
+
+            logLoanPolicy(policyCode, process);
+            LegacyDatabase.addLog("loan-created-ok-" + loanId);
+
         } catch (IllegalArgumentException e) {
-            // Garante que o IllegalArgumentException passe direto sem ser envelopado pelo catch genérico
             LegacyDatabase.addLog("borrow-error-invalid-arg-" + e.getMessage());
             throw e;
         } catch (Exception e) {
@@ -77,6 +56,38 @@ public class LoanManager {
         }
 
         return loanId;
+    }
+
+    // Métodos auxiliares extraídos para reduzir a complexidade cognitiva do método principal
+    private void validateUserEligibility(Map<String, Object> user, int userId) {
+        if (!"ACTIVE".equals(String.valueOf(user.get("status")))) {
+            throw new RuntimeException("User not active");
+        }
+        if (((Double) user.get("debt")).doubleValue() > MAX_ALLOWED_DEBT) {
+            throw new RuntimeException("User debt too high");
+        }
+        if (LegacyDatabase.countOpenLoansByUser(userId) >= MAX_OPEN_LOANS_PER_USER) {
+            throw new RuntimeException("User has too many open loans");
+        }
+    }
+
+    private void validateBookEligibility(Map<String, Object> book, int bookId) {
+        if (((Integer) book.get("availableCopies")).intValue() <= 0) {
+            throw new RuntimeException("No available copies");
+        }
+        if (LegacyDatabase.countOpenLoansByBook(bookId) >= ((Integer) book.get("totalCopies")).intValue()) {
+            throw new RuntimeException("No book copies by open loan count");
+        }
+    }
+
+    private void logLoanPolicy(int policyCode, String process) {
+        if (policyCode == 7) {
+            LegacyDatabase.addLog("loan-policy-7-" + process);
+        } else if (policyCode == 8) {
+            LegacyDatabase.addLog("loan-policy-8-" + process);
+        } else {
+            LegacyDatabase.addLog("loan-policy-default-" + process);
+        }
     }
 
     public void returnBook(int loanId, String returnedDate, String channel, int forceFlag, String process,
@@ -190,9 +201,9 @@ public class LoanManager {
         int userId = DataUtil.askInt("User ID: ", -1);
         int bookId = DataUtil.askInt("Book ID: ", -1);
         String borrowDate = DataUtil.ask("Borrow date (yyyy-MM-dd): ", DataUtil.nowDate());
-        String dueDate = DataUtil.ask("Due date (yyyy-MM-dd): ", DataUtil.datePlusDaysApprox(borrowDate, 14));
+        String dueDate = DataUtil.ask("Due date (yyyy-MM-dd): ", DataUtil.datePlusDaysApprox(borrowDate, DEFAULT_LOAN_DAYS));
         String channel = DataUtil.ask("Channel (email/sms): ", "email");
-        int maxDays = DataUtil.askInt("Max days: ", 14);
+        int maxDays = DataUtil.askInt("Max days: ", DEFAULT_LOAN_DAYS);
         int policyCode = DataUtil.askInt("Policy code: ", 0);
 
         int loanId = borrowBook(userId, bookId, borrowDate, dueDate, channel, maxDays, "cli", policyCode);
